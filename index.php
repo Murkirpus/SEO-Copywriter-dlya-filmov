@@ -2,6 +2,137 @@
 // Конфигурация
 $openai_api_key = 'sk-proj-';
 
+// SEO-аналитика
+function analyzeSEOMetrics($result) {
+    if (!$result) return null;
+    
+    $title = $result['meta_title'] ?? '';
+    $description = $result['meta_description'] ?? '';
+    $keywords = $result['keywords'] ?? '';
+    
+    $titleLength = mb_strlen($title);
+    $descLength = mb_strlen($description);
+    $keywordsCount = count(array_filter(explode(',', $keywords)));
+    
+    return [
+        'title' => [
+            'length' => $titleLength,
+            'status' => $titleLength <= 60 ? 'good' : ($titleLength <= 70 ? 'warning' : 'error'),
+            'max' => 60
+        ],
+        'description' => [
+            'length' => $descLength,
+            'status' => ($descLength >= 150 && $descLength <= 160) ? 'good' : 
+                       ($descLength >= 120 && $descLength <= 180) ? 'warning' : 'error',
+            'min' => 150,
+            'max' => 160
+        ],
+        'keywords' => [
+            'count' => $keywordsCount,
+            'status' => ($keywordsCount >= 5 && $keywordsCount <= 15) ? 'good' : 
+                       ($keywordsCount >= 3 && $keywordsCount <= 20) ? 'warning' : 'error'
+        ],
+        'readability' => calculateReadability($result['plot_section'] ?? '')
+    ];
+}
+
+function calculateReadability($text) {
+    $sentences = preg_split('/[.!?]+/', $text);
+    $words = str_word_count($text);
+    $avgWordsPerSentence = $words / max(count($sentences) - 1, 1);
+    
+    if ($avgWordsPerSentence <= 15) return ['score' => 'Отличная', 'status' => 'good'];
+    if ($avgWordsPerSentence <= 20) return ['score' => 'Хорошая', 'status' => 'warning'];
+    return ['score' => 'Сложная', 'status' => 'error'];
+}
+
+// Функции экспорта
+function generateHTMLExport($result, $seoMetrics) {
+    if (!$result) return '';
+    
+    $html = '<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>' . htmlspecialchars($result['meta_title']) . '</title>
+    <meta name="description" content="' . htmlspecialchars($result['meta_description']) . '">
+    <meta name="keywords" content="' . htmlspecialchars($result['keywords']) . '">
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.6; }
+        h1 { color: #333; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
+        h2 { color: #667eea; margin-top: 30px; }
+        .keywords { background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0; }
+        .meta-info { background: #e3f2fd; padding: 15px; border-radius: 8px; border-left: 4px solid #2196f3; }
+    </style>
+</head>
+<body>
+    <h1>' . htmlspecialchars($result['h1_title']) . '</h1>
+    
+    <h2>Сюжет фильма</h2>
+    <p>' . nl2br(htmlspecialchars($result['plot_section'])) . '</p>
+    
+    <h2>Почему стоит посмотреть</h2>
+    <p>' . nl2br(htmlspecialchars($result['why_watch_section'])) . '</p>
+    
+    <h2>Где и как смотреть</h2>
+    <p>' . nl2br(htmlspecialchars($result['where_watch_section'])) . '</p>
+    
+    <div class="keywords">
+        <h3>Ключевые слова:</h3>
+        <p>' . htmlspecialchars($result['keywords']) . '</p>
+    </div>
+    
+    <div class="meta-info">
+        <h3>SEO метаданные:</h3>
+        <p><strong>Title:</strong> ' . htmlspecialchars($result['meta_title']) . '</p>
+        <p><strong>Description:</strong> ' . htmlspecialchars($result['meta_description']) . '</p>
+    </div>
+</body>
+</html>';
+    
+    return $html;
+}
+
+function generateTXTExport($result) {
+    if (!$result) return '';
+    
+    $txt = "SEO-КОНТЕНТ ДЛЯ ФИЛЬМА\n";
+    $txt .= "========================\n\n";
+    $txt .= "H1 ЗАГОЛОВОК:\n" . ($result['h1_title'] ?? '') . "\n\n";
+    $txt .= "СЮЖЕТ ФИЛЬМА:\n" . ($result['plot_section'] ?? '') . "\n\n";
+    $txt .= "ПОЧЕМУ СТОИТ ПОСМОТРЕТЬ:\n" . ($result['why_watch_section'] ?? '') . "\n\n";
+    $txt .= "ГДЕ И КАК СМОТРЕТЬ:\n" . ($result['where_watch_section'] ?? '') . "\n\n";
+    $txt .= "КЛЮЧЕВЫЕ СЛОВА:\n" . ($result['keywords'] ?? '') . "\n\n";
+    $txt .= "META TITLE:\n" . ($result['meta_title'] ?? '') . "\n\n";
+    $txt .= "META DESCRIPTION:\n" . ($result['meta_description'] ?? '') . "\n\n";
+    $txt .= "Создано: " . date('d.m.Y H:i:s') . "\n";
+    
+    return $txt;
+}
+
+// Обработка экспорта
+if (isset($_GET['export']) && isset($_SESSION['last_result'])) {
+    $result = $_SESSION['last_result'];
+    $seoMetrics = analyzeSEOMetrics($result);
+    
+    if ($_GET['export'] === 'html') {
+        $html = generateHTMLExport($result, $seoMetrics);
+        header('Content-Type: text/html; charset=utf-8');
+        header('Content-Disposition: attachment; filename="seo-content-' . date('Y-m-d-H-i') . '.html"');
+        echo $html;
+        exit;
+    }
+    
+    if ($_GET['export'] === 'txt') {
+        $txt = generateTXTExport($result);
+        header('Content-Type: text/plain; charset=utf-8');
+        header('Content-Disposition: attachment; filename="seo-content-' . date('Y-m-d-H-i') . '.txt"');
+        echo $txt;
+        exit;
+    }
+}
+
 // Доступные модели OpenAI
 function getOpenAIModels() {
     return [
@@ -309,6 +440,7 @@ function getGenreTemplates() {
 }
 
 // Обработка POST запроса
+session_start();
 $result = null;
 $error = '';
 
@@ -364,6 +496,9 @@ if ($_POST && isset($_POST['film_description']) && !empty(trim($_POST['film_desc
             
             if (json_last_error() !== JSON_ERROR_NONE) {
                 $error = 'Ошибка парсинга JSON ответа: ' . json_last_error_msg();
+            } else {
+                // Сохраняем результат в сессию для экспорта
+                $_SESSION['last_result'] = $result;
             }
         } else {
             $error = 'Ошибка в ответе API';
@@ -375,6 +510,7 @@ if ($_POST && isset($_POST['film_description']) && !empty(trim($_POST['film_desc
 
 $templates = getGenreTemplates();
 $models = getOpenAIModels();
+$seoMetrics = $result ? analyzeSEOMetrics($result) : null;
 ?>
 
 <!DOCTYPE html>
@@ -382,7 +518,7 @@ $models = getOpenAIModels();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SEO Копирайтер для фильмов | AI-помощник с выбором моделей и жанров</title>
+    <title>SEO Копирайтер для фильмов | AI-помощник с SEO-аналитикой</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         * {
@@ -593,6 +729,107 @@ $models = getOpenAIModels();
             margin-top: 30px;
         }
 
+        /* SEO АНАЛИТИКА */
+        .seo-analytics {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            border-left: 4px solid #667eea;
+        }
+
+        .seo-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .metric-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .metric-item.good {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+
+        .metric-item.warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+        }
+
+        .metric-item.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .metric-value.good { color: #155724; }
+        .metric-value.warning { color: #856404; }
+        .metric-value.error { color: #721c24; }
+
+        .metric-label {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        /* КНОПКИ ЭКСПОРТА */
+        .export-buttons {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            border-left: 4px solid #28a745;
+        }
+
+        .export-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .export-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .export-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(40, 167, 69, 0.3);
+        }
+
+        .export-btn.copy {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        }
+
+        .export-btn.copy:hover {
+            box-shadow: 0 8px 16px rgba(0, 123, 255, 0.3);
+        }
+
         .results-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
@@ -721,34 +958,8 @@ $models = getOpenAIModels();
             background: #218838;
         }
 
-        .genre-preview {
-            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-            padding: 20px;
-            border-radius: 12px;
-            margin-top: 20px;
-            border: 1px solid #667eea20;
-        }
-
-        .genre-features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-        }
-
-        .feature-tag {
-            background: white;
-            padding: 8px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            color: #667eea;
-            font-weight: 600;
-            text-align: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
         @media (max-width: 768px) {
-            .results-grid {
+            .results-grid, .seo-metrics, .export-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -763,10 +974,6 @@ $models = getOpenAIModels();
             .main-content {
                 padding: 20px;
             }
-
-            .genre-features {
-                grid-template-columns: 1fr;
-            }
         }
     </style>
 </head>
@@ -774,7 +981,7 @@ $models = getOpenAIModels();
     <div class="container">
         <div class="header">
             <h1><i class="fas fa-robot"></i> SEO Копирайтер для фильмов</h1>
-            <p>Выберите модель AI и жанр для создания идеальных SEO-текстов</p>
+            <p>Создавайте идеальные SEO-тексты с аналитикой и экспортом</p>
         </div>
 
         <div class="main-content">
@@ -849,6 +1056,64 @@ $models = getOpenAIModels();
                         <i class="fas fa-star"></i>
                         SEO-результат (<?php echo $templates[$_POST['genre']]['name']; ?> + <?php echo $models[$_POST['model']]['name']; ?>)
                     </h2>
+
+                    <!-- SEO АНАЛИТИКА -->
+                    <?php if ($seoMetrics): ?>
+                    <div class="seo-analytics">
+                        <div class="card-title">
+                            <i class="fas fa-chart-line"></i>
+                            SEO Аналитика
+                        </div>
+                        <div class="seo-metrics">
+                            <div class="metric-item <?php echo $seoMetrics['title']['status']; ?>">
+                                <div class="metric-value <?php echo $seoMetrics['title']['status']; ?>">
+                                    <?php echo $seoMetrics['title']['length']; ?>/<?php echo $seoMetrics['title']['max']; ?>
+                                </div>
+                                <div class="metric-label">Title (символов)</div>
+                            </div>
+                            <div class="metric-item <?php echo $seoMetrics['description']['status']; ?>">
+                                <div class="metric-value <?php echo $seoMetrics['description']['status']; ?>">
+                                    <?php echo $seoMetrics['description']['length']; ?>/<?php echo $seoMetrics['description']['max']; ?>
+                                </div>
+                                <div class="metric-label">Description (символов)</div>
+                            </div>
+                            <div class="metric-item <?php echo $seoMetrics['keywords']['status']; ?>">
+                                <div class="metric-value <?php echo $seoMetrics['keywords']['status']; ?>">
+                                    <?php echo $seoMetrics['keywords']['count']; ?>
+                                </div>
+                                <div class="metric-label">Ключевых слов</div>
+                            </div>
+                            <div class="metric-item <?php echo $seoMetrics['readability']['status']; ?>">
+                                <div class="metric-value <?php echo $seoMetrics['readability']['status']; ?>">
+                                    <?php echo $seoMetrics['readability']['score']; ?>
+                                </div>
+                                <div class="metric-label">Читаемость</div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <!-- КНОПКИ ЭКСПОРТА -->
+                    <div class="export-buttons">
+                        <div class="card-title">
+                            <i class="fas fa-download"></i>
+                            Экспорт результатов
+                        </div>
+                        <div class="export-grid">
+                            <a href="?export=html" class="export-btn" target="_blank">
+                                <i class="fas fa-file-code"></i>
+                                Скачать HTML
+                            </a>
+                            <a href="?export=txt" class="export-btn" target="_blank">
+                                <i class="fas fa-file-alt"></i>
+                                Скачать TXT
+                            </a>
+                            <button class="export-btn copy" onclick="copyAllContent()">
+                                <i class="fas fa-copy"></i>
+                                Копировать всё
+                            </button>
+                        </div>
+                    </div>
 
                     <div class="results-grid">
                         <!-- H1 Заголовок -->
@@ -1053,6 +1318,36 @@ $models = getOpenAIModels();
             const description = <?php echo json_encode($result['meta_description'] ?? ''); ?>;
             const metaText = `<title>${title}</title>\n<meta name="description" content="${description}">`;
             copyToClipboard(metaText);
+            <?php else: ?>
+            showNotification('Сначала создайте SEO-текст!');
+            <?php endif; ?>
+        }
+
+        // Копирование всего контента
+        function copyAllContent() {
+            <?php if ($result): ?>
+            const allContent = `H1 ЗАГОЛОВОК:
+<?php echo addslashes($result['h1_title'] ?? ''); ?>
+
+СЮЖЕТ ФИЛЬМА:
+<?php echo addslashes($result['plot_section'] ?? ''); ?>
+
+ПОЧЕМУ СТОИТ ПОСМОТРЕТЬ:
+<?php echo addslashes($result['why_watch_section'] ?? ''); ?>
+
+ГДЕ И КАК СМОТРЕТЬ:
+<?php echo addslashes($result['where_watch_section'] ?? ''); ?>
+
+КЛЮЧЕВЫЕ СЛОВА:
+<?php echo addslashes($result['keywords'] ?? ''); ?>
+
+META TITLE:
+<?php echo addslashes($result['meta_title'] ?? ''); ?>
+
+META DESCRIPTION:
+<?php echo addslashes($result['meta_description'] ?? ''); ?>`;
+            
+            copyToClipboard(allContent);
             <?php else: ?>
             showNotification('Сначала создайте SEO-текст!');
             <?php endif; ?>
