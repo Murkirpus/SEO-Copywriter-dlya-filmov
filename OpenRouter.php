@@ -172,16 +172,7 @@ function getOpenRouterModels() {
             'category' => 'free'
         ],
         
-        'google/gemini-2.0-flash-exp:free' => [
-            'name' => '🆓 Gemini 2.0 Flash Exp',
-            'description' => 'Самая популярная! 1+ трлн токенов. Мультимодальная',
-            'price' => 'БЕСПЛАТНО',
-            'cost_1000' => '$0.00',
-            'speed' => '⚡⚡⚡⚡⚡',
-            'quality' => '⭐⭐⭐⭐⭐',
-            'recommended' => true,
-            'category' => 'free'
-        ],
+
         
         'mistralai/mistral-nemo:free' => [
             'name' => '🆓 Mistral Nemo',
@@ -201,6 +192,17 @@ function getOpenRouterModels() {
             'price' => '$0.14 / $0.28 за 1М токенов',
             'cost_1000' => '$0.42',
             'speed' => '⚡⚡⚡⚡',
+            'quality' => '⭐⭐⭐⭐',
+            'recommended' => true,
+            'category' => 'budget'
+        ],
+        
+        'openai/gpt-4.1-nano' => [
+            'name' => '💰 GPT-4.1 Nano',
+            'description' => 'Новейшая быстрая и дешевая модель OpenAI',
+            'price' => '$0.10 / $0.40 за 1М токенов',
+            'cost_1000' => '$0.50',
+            'speed' => '⚡⚡⚡⚡⚡',
             'quality' => '⭐⭐⭐⭐',
             'recommended' => true,
             'category' => 'budget'
@@ -296,6 +298,61 @@ function getOpenRouterModels() {
         ],
 
         // 🚀 НОВЕЙШИЕ И ПОПУЛЯРНЫЕ МОДЕЛИ
+        'anthropic/claude-3.7-sonnet' => [
+            'name' => '🚀 Claude 3.7 Sonnet',
+            'description' => 'Новейшая модель Anthropic с улучшенными возможностями',
+            'price' => '$3.00 / $15.00 за 1М токенов',
+            'cost_1000' => '$18.00',
+            'speed' => '⚡⚡⚡',
+            'quality' => '⭐⭐⭐⭐⭐',
+            'recommended' => true,
+            'category' => 'newest'
+        ],
+        
+        'anthropic/claude-sonnet-4' => [
+            'name' => '🚀 Claude Sonnet 4',
+            'description' => 'Революционная Claude 4 с мгновенными ответами',
+            'price' => '$5.00 / $25.00 за 1М токенов',
+            'cost_1000' => '$30.00',
+            'speed' => '⚡⚡⚡⚡',
+            'quality' => '⭐⭐⭐⭐⭐',
+            'recommended' => true,
+            'category' => 'newest'
+        ],
+        
+        'anthropic/claude-opus-4' => [
+            'name' => '🚀 Claude Opus 4',
+            'description' => 'Топовая модель Claude 4 с максимальными возможностями',
+            'price' => '$15.00 / $75.00 за 1М токенов',
+            'cost_1000' => '$90.00',
+            'speed' => '⚡⚡',
+            'quality' => '⭐⭐⭐⭐⭐',
+            'recommended' => false,
+            'category' => 'newest'
+        ],
+        
+        'x-ai/grok-3' => [
+            'name' => '🚀 Grok 3.0',
+            'description' => 'Мощная модель xAI с думающим режимом',
+            'price' => '$2.50 / $12.50 за 1М токенов',
+            'cost_1000' => '$15.00',
+            'speed' => '⚡⚡⚡',
+            'quality' => '⭐⭐⭐⭐⭐',
+            'recommended' => true,
+            'category' => 'newest'
+        ],
+        
+        'x-ai/grok-4' => [
+            'name' => '🚀 Grok 4.0',
+            'description' => 'Новейшая модель xAI с продвинутыми рассуждениями',
+            'price' => '$4.00 / $20.00 за 1М токенов',
+            'cost_1000' => '$24.00',
+            'speed' => '⚡⚡',
+            'quality' => '⭐⭐⭐⭐⭐',
+            'recommended' => true,
+            'category' => 'newest'
+        ],
+        
         'deepseek/deepseek-r1' => [
             'name' => '🚀 DeepSeek R1',
             'description' => 'Революционная модель с рассуждениями. Конкурент GPT-o1',
@@ -598,7 +655,7 @@ $error = '';
 if ($_POST && isset($_POST['film_description']) && !empty(trim($_POST['film_description']))) {
     $film_description = trim($_POST['film_description']);
     $selected_genre = $_POST['genre'] ?? 'universal';
-    $selected_model = $_POST['model'] ?? 'google/gemini-2.0-flash-exp:free';
+    $selected_model = $_POST['model'] ?? 'qwen/qwen-2.5-72b-instruct:free';
     
     $templates = getGenreTemplates();
     $template = $templates[$selected_genre];
@@ -1183,7 +1240,7 @@ $seoMetrics = $result ? analyzeSEOMetrics($result) : null;
             <h1><i class="fas fa-robot"></i> SEO Копирайтер для фильмов</h1>
             <p>Создавайте идеальные SEO-тексты с помощью 500+ AI моделей</p>
             <div class="openrouter-badge">
-                <i class="fas fa-rocket"></i> Работает на OpenRouter.ai • 18 лучших моделей
+                <i class="fas fa-rocket"></i> Работает на OpenRouter.ai • 22 лучших модели
             </div>
         </div>
 
@@ -1215,7 +1272,7 @@ $seoMetrics = $result ? analyzeSEOMetrics($result) : null;
                                 if (isset($categorizedModels[$category])) {
                                     echo '<optgroup label="' . $categoryName . '">';
                                     foreach ($categorizedModels[$category] as $key => $model) {
-                                        $selected = ($_POST['model'] ?? 'google/gemini-2.0-flash-exp:free') == $key ? 'selected' : '';
+                                        $selected = ($_POST['model'] ?? 'qwen/qwen-2.5-72b-instruct:free') == $key ? 'selected' : '';
                                         echo '<option value="' . $key . '" ' . $selected . '>';
                                         echo $model['name'] . ' - ' . $model['cost_1000'] . ' за 1000 текстов';
                                         echo $model['recommended'] ? ' (РЕКОМЕНДУЕТСЯ)' : '';
@@ -1441,7 +1498,7 @@ $seoMetrics = $result ? analyzeSEOMetrics($result) : null;
                     <div class="empty-state">
                         <i class="fas fa-file-alt"></i>
                         <h3>Здесь появится ваш SEO-текст</h3>
-                        <p>Выберите модель AI (рекомендуем Gemini 2.5 Flash), жанр, введите описание фильма и нажмите "Создать SEO-текст"</p>
+                        <p>Выберите AI модель, жанр, введите описание фильма и нажмите "Создать SEO-текст"</p>
                     </div>
                 </div>
             <?php endif; ?>
