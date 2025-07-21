@@ -113,6 +113,252 @@ function generateTXTExport($result) {
     return $txt;
 }
 
+// ФУНКЦИЯ: Добавление результата в накопительную базу
+function addToResultsHistory($result, $seoMetrics) {
+    if (!$result) return;
+    
+    // Инициализируем историю результатов если ее нет
+    if (!isset($_SESSION['results_history'])) {
+        $_SESSION['results_history'] = [];
+    }
+    
+    // Добавляем новый результат с timestamp
+    $_SESSION['results_history'][] = [
+        'result' => $result,
+        'seo_metrics' => $seoMetrics,
+        'timestamp' => time(),
+        'date' => date('d.m.Y H:i')
+    ];
+}
+
+// ФУНКЦИЯ: Генерация Excel с накопленными результатами
+function generateExcelExport($allResults = null) {
+    // Если передали конкретный результат - используем только его
+    if ($allResults === null) {
+        $allResults = $_SESSION['results_history'] ?? [];
+    }
+    
+    if (empty($allResults)) return '';
+    
+    // Создаем XML файл в формате Excel
+    $excel = '<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
+  <Title>SEO Контент - Накопительная база</Title>
+  <Author>SEO Копирайтер</Author>
+  <Created>' . date('Y-m-d\TH:i:s\Z') . '</Created>
+ </DocumentProperties>
+ <Styles>
+  <Style ss:ID="Header">
+   <Font ss:Bold="1" ss:Size="12" ss:Color="#ffffff"/>
+   <Interior ss:Color="#667eea" ss:Pattern="Solid"/>
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="Content">
+   <Font ss:Size="10"/>
+   <Alignment ss:Vertical="Top" ss:WrapText="1"/>
+   <Borders>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="SEOGood">
+   <Interior ss:Color="#d4edda" ss:Pattern="Solid"/>
+   <Font ss:Color="#155724" ss:Bold="1" ss:Size="10"/>
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="SEOWarning">
+   <Interior ss:Color="#fff3cd" ss:Pattern="Solid"/>
+   <Font ss:Color="#856404" ss:Bold="1" ss:Size="10"/>
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
+   </Borders>
+  </Style>
+  <Style ss:ID="SEOError">
+   <Interior ss:Color="#f8d7da" ss:Pattern="Solid"/>
+   <Font ss:Color="#721c24" ss:Bold="1" ss:Size="10"/>
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
+   </Borders>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="SEO База данных">
+  <Table>
+   <!-- Настройка ширины колонок -->
+   <Column ss:Width="40"/>
+   <Column ss:Width="180"/>
+   <Column ss:Width="300"/>
+   <Column ss:Width="300"/>
+   <Column ss:Width="200"/>
+   <Column ss:Width="250"/>
+   <Column ss:Width="180"/>
+   <Column ss:Width="180"/>
+   <Column ss:Width="80"/>
+   <Column ss:Width="80"/>
+   <Column ss:Width="80"/>
+   <Column ss:Width="80"/>
+   <Column ss:Width="120"/>
+   
+   <!-- ЗАГОЛОВКИ (первая строка) -->
+   <Row ss:Height="40">
+    <Cell ss:StyleID="Header">
+     <Data ss:Type="String">№</Data>
+    </Cell>
+    <Cell ss:StyleID="Header">
+     <Data ss:Type="String">H1 Заголовок</Data>
+    </Cell>
+    <Cell ss:StyleID="Header">
+     <Data ss:Type="String">Сюжет фильма</Data>
+    </Cell>
+    <Cell ss:StyleID="Header">
+     <Data ss:Type="String">Почему стоит посмотреть</Data>
+    </Cell>
+    <Cell ss:StyleID="Header">
+     <Data ss:Type="String">Где и как смотреть</Data>
+    </Cell>
+    <Cell ss:StyleID="Header">
+     <Data ss:Type="String">Ключевые слова</Data>
+    </Cell>
+    <Cell ss:StyleID="Header">
+     <Data ss:Type="String">Meta Title</Data>
+    </Cell>
+    <Cell ss:StyleID="Header">
+     <Data ss:Type="String">Meta Description</Data>
+    </Cell>
+    <Cell ss:StyleID="Header">
+     <Data ss:Type="String">Title длина</Data>
+    </Cell>
+    <Cell ss:StyleID="Header">
+     <Data ss:Type="String">Desc длина</Data>
+    </Cell>
+    <Cell ss:StyleID="Header">
+     <Data ss:Type="String">Ключевики</Data>
+    </Cell>
+    <Cell ss:StyleID="Header">
+     <Data ss:Type="String">Читаемость</Data>
+    </Cell>
+    <Cell ss:StyleID="Header">
+     <Data ss:Type="String">Дата создания</Data>
+    </Cell>
+   </Row>';
+   
+   // Добавляем все результаты как отдельные строки
+   $rowNumber = 1;
+   foreach ($allResults as $resultItem) {
+       $result = $resultItem['result'];
+       $seoMetrics = $resultItem['seo_metrics'];
+       $date = $resultItem['date'];
+       
+       $excel .= '
+   
+   <!-- ДАННЫЕ (строка ' . $rowNumber . ') -->
+   <Row ss:Height="100">
+    <Cell ss:StyleID="Content">
+     <Data ss:Type="Number">' . $rowNumber . '</Data>
+    </Cell>
+    <Cell ss:StyleID="Content">
+     <Data ss:Type="String">' . htmlspecialchars($result['h1_title'] ?? '') . '</Data>
+    </Cell>
+    <Cell ss:StyleID="Content">
+     <Data ss:Type="String">' . htmlspecialchars($result['plot_section'] ?? '') . '</Data>
+    </Cell>
+    <Cell ss:StyleID="Content">
+     <Data ss:Type="String">' . htmlspecialchars($result['why_watch_section'] ?? '') . '</Data>
+    </Cell>
+    <Cell ss:StyleID="Content">
+     <Data ss:Type="String">' . htmlspecialchars($result['where_watch_section'] ?? '') . '</Data>
+    </Cell>
+    <Cell ss:StyleID="Content">
+     <Data ss:Type="String">' . htmlspecialchars($result['keywords'] ?? '') . '</Data>
+    </Cell>
+    <Cell ss:StyleID="Content">
+     <Data ss:Type="String">' . htmlspecialchars($result['meta_title'] ?? '') . '</Data>
+    </Cell>
+    <Cell ss:StyleID="Content">
+     <Data ss:Type="String">' . htmlspecialchars($result['meta_description'] ?? '') . '</Data>
+    </Cell>';
+    
+        // Добавляем SEO метрики если есть
+        if ($seoMetrics) {
+            $excel .= '
+    <Cell ss:StyleID="SEO' . ucfirst($seoMetrics['title']['status']) . '">
+     <Data ss:Type="String">' . $seoMetrics['title']['length'] . '/' . $seoMetrics['title']['max'] . '</Data>
+    </Cell>
+    <Cell ss:StyleID="SEO' . ucfirst($seoMetrics['description']['status']) . '">
+     <Data ss:Type="String">' . $seoMetrics['description']['length'] . '/' . $seoMetrics['description']['max'] . '</Data>
+    </Cell>
+    <Cell ss:StyleID="SEO' . ucfirst($seoMetrics['keywords']['status']) . '">
+     <Data ss:Type="String">' . $seoMetrics['keywords']['count'] . '</Data>
+    </Cell>
+    <Cell ss:StyleID="SEO' . ucfirst($seoMetrics['readability']['status']) . '">
+     <Data ss:Type="String">' . $seoMetrics['readability']['score'] . '</Data>
+    </Cell>';
+        } else {
+            $excel .= '
+    <Cell ss:StyleID="Content">
+     <Data ss:Type="String">-</Data>
+    </Cell>
+    <Cell ss:StyleID="Content">
+     <Data ss:Type="String">-</Data>
+    </Cell>
+    <Cell ss:StyleID="Content">
+     <Data ss:Type="String">-</Data>
+    </Cell>
+    <Cell ss:StyleID="Content">
+     <Data ss:Type="String">-</Data>
+    </Cell>';
+        }
+        
+        $excel .= '
+    <Cell ss:StyleID="Content">
+     <Data ss:Type="String">' . $date . '</Data>
+    </Cell>
+   </Row>';
+   
+       $rowNumber++;
+   }
+   
+   $excel .= '
+   
+  </Table>
+ </Worksheet>
+</Workbook>';
+    
+    return $excel;
+}
+
+// ФУНКЦИЯ: Очистка истории результатов
+function clearResultsHistory() {
+    $_SESSION['results_history'] = [];
+}
+
 // Обработка экспорта
 if (isset($_GET['export']) && isset($_SESSION['last_result'])) {
     $result = $_SESSION['last_result'];
@@ -133,6 +379,22 @@ if (isset($_GET['export']) && isset($_SESSION['last_result'])) {
         echo $txt;
         exit;
     }
+    
+    // ЭКСПОРТ НАКОПИТЕЛЬНОЙ БАЗЫ В EXCEL
+    if ($_GET['export'] === 'excel') {
+        $excel = generateExcelExport();
+        header('Content-Type: application/vnd.ms-excel; charset=utf-8');
+        header('Content-Disposition: attachment; filename="seo-database-' . date('Y-m-d-H-i') . '.xls"');
+        echo $excel;
+        exit;
+    }
+}
+
+// Обработка очистки истории
+if (isset($_GET['action']) && $_GET['action'] === 'clear_history') {
+    clearResultsHistory();
+    header('Location: ' . $_SERVER['PHP_SELF']);
+    exit;
 }
 
 // Доступные модели OpenRouter
@@ -709,6 +971,10 @@ if ($_POST && isset($_POST['film_description']) && !empty(trim($_POST['film_desc
             } else {
                 // Сохраняем результат в сессию для экспорта
                 $_SESSION['last_result'] = $result;
+                
+                // ДОБАВЛЯЕМ В НАКОПИТЕЛЬНУЮ БАЗУ
+                $seoMetrics = analyzeSEOMetrics($result);
+                addToResultsHistory($result, $seoMetrics);
             }
         } else {
             $error = 'Ошибка в ответе API: ' . (isset($response_data['error']['message']) ? $response_data['error']['message'] : 'Неизвестная ошибка');
@@ -1087,6 +1353,15 @@ $seoMetrics = $result ? analyzeSEOMetrics($result) : null;
             box-shadow: 0 8px 16px rgba(0, 123, 255, 0.3);
         }
 
+        /* НОВЫЙ СТИЛЬ ДЛЯ EXCEL */
+        .export-btn.excel {
+            background: linear-gradient(135deg, #217346 0%, #0F5132 100%);
+        }
+
+        .export-btn.excel:hover {
+            box-shadow: 0 8px 16px rgba(33, 115, 70, 0.3);
+        }
+
         .results-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
@@ -1379,6 +1654,14 @@ $seoMetrics = $result ? analyzeSEOMetrics($result) : null;
                         <div class="card-title">
                             <i class="fas fa-download"></i>
                             Экспорт результатов
+                            <?php 
+                            $historyCount = isset($_SESSION['results_history']) ? count($_SESSION['results_history']) : 0;
+                            if ($historyCount > 0): 
+                            ?>
+                                <span style="background: #28a745; color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px; margin-left: 10px;">
+                                    📊 В базе: <?php echo $historyCount; ?> фильмов
+                                </span>
+                            <?php endif; ?>
                         </div>
                         <div class="export-grid">
                             <a href="?export=html" class="export-btn" target="_blank">
@@ -1389,10 +1672,25 @@ $seoMetrics = $result ? analyzeSEOMetrics($result) : null;
                                 <i class="fas fa-file-alt"></i>
                                 Скачать TXT
                             </a>
+                            <!-- ОБНОВЛЕННАЯ КНОПКА EXCEL -->
+                            <a href="?export=excel" class="export-btn excel" target="_blank">
+                                <i class="fas fa-file-excel"></i>
+                                <?php if ($historyCount > 1): ?>
+                                    База Excel (<?php echo $historyCount; ?> фильмов)
+                                <?php else: ?>
+                                    Скачать Excel
+                                <?php endif; ?>
+                            </a>
                             <button class="export-btn copy" onclick="copyAllContent()">
                                 <i class="fas fa-copy"></i>
                                 Копировать всё
                             </button>
+                            <?php if ($historyCount > 0): ?>
+                                <a href="?action=clear_history" class="export-btn" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);" onclick="return confirm('Очистить всю накопленную базу из <?php echo $historyCount; ?> фильмов?')">
+                                    <i class="fas fa-trash-alt"></i>
+                                    Очистить базу
+                                </a>
+                            <?php endif; ?>
                         </div>
                     </div>
 
@@ -1625,14 +1923,23 @@ META DESCRIPTION:
             <?php endif; ?>
         }
 
+        // Показ уведомления при успешном создании SEO-текста
+        <?php if ($result && !$error): ?>
+        window.addEventListener('load', function() {
+            const historyCount = <?php echo isset($_SESSION['results_history']) ? count($_SESSION['results_history']) : 0; ?>;
+            showNotification(`✅ SEO-текст создан и добавлен в базу! Всего фильмов: ${historyCount}`, 'success');
+        });
+        <?php endif; ?>
+
         // Показ уведомления
-        function showNotification(message) {
+        function showNotification(message, type = 'success') {
             const notification = document.createElement('div');
+            const bgColor = type === 'success' ? '#28a745' : '#dc3545';
             notification.style.cssText = `
                 position: fixed;
                 top: 20px;
                 right: 20px;
-                background: #28a745;
+                background: ${bgColor};
                 color: white;
                 padding: 15px 20px;
                 border-radius: 8px;
@@ -1642,6 +1949,7 @@ META DESCRIPTION:
                 opacity: 0;
                 transform: translateY(-20px);
                 transition: all 0.3s ease;
+                max-width: 300px;
             `;
             notification.textContent = message;
             document.body.appendChild(notification);
@@ -1657,7 +1965,7 @@ META DESCRIPTION:
                 setTimeout(() => {
                     document.body.removeChild(notification);
                 }, 300);
-            }, 3000);
+            }, 4000);
         }
 
         // Автосохранение в localStorage
