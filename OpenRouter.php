@@ -4,6 +4,9 @@ $openrouter_api_key = 'sk-or-v1-'; // Замените на ваш API ключ 
 $app_name = 'SEO Копирайтер для фильмов'; // Название вашего приложения
 $site_url = 'https://yourdomain.com'; // URL вашего сайта
 
+// ВАЖНО: Запуск сессии в самом начале
+session_start();
+
 // SEO-аналитика
 function analyzeSEOMetrics($result) {
     if (!$result) return null;
@@ -138,7 +141,10 @@ function generateExcelExport($allResults = null) {
         $allResults = $_SESSION['results_history'] ?? [];
     }
     
-    if (empty($allResults)) return '';
+    // Проверяем наличие данных
+    if (empty($allResults)) {
+        return ''; // Возвращаем пустую строку, если нет данных
+    }
     
     // Создаем XML файл в формате Excel
     $excel = '<?xml version="1.0" encoding="UTF-8"?>
@@ -360,33 +366,56 @@ function clearResultsHistory() {
 }
 
 // Обработка экспорта
-if (isset($_GET['export']) && isset($_SESSION['last_result'])) {
-    $result = $_SESSION['last_result'];
-    $seoMetrics = analyzeSEOMetrics($result);
+// ИСПРАВЛЕНИЕ: Отдельная обработка Excel экспорта без требования last_result
+if (isset($_GET['export'])) {
     
-    if ($_GET['export'] === 'html') {
-        $html = generateHTMLExport($result, $seoMetrics);
-        header('Content-Type: text/html; charset=utf-8');
-        header('Content-Disposition: attachment; filename="seo-content-' . date('Y-m-d-H-i') . '.html"');
-        echo $html;
-        exit;
-    }
-    
-    if ($_GET['export'] === 'txt') {
-        $txt = generateTXTExport($result);
-        header('Content-Type: text/plain; charset=utf-8');
-        header('Content-Disposition: attachment; filename="seo-content-' . date('Y-m-d-H-i') . '.txt"');
-        echo $txt;
-        exit;
-    }
-    
-    // ЭКСПОРТ НАКОПИТЕЛЬНОЙ БАЗЫ В EXCEL
+    // ЭКСПОРТ НАКОПИТЕЛЬНОЙ БАЗЫ В EXCEL (не требует last_result)
     if ($_GET['export'] === 'excel') {
         $excel = generateExcelExport();
-        header('Content-Type: application/vnd.ms-excel; charset=utf-8');
-        header('Content-Disposition: attachment; filename="seo-database-' . date('Y-m-d-H-i') . '.xls"');
-        echo $excel;
-        exit;
+        if (!empty($excel)) {
+            // Очистка буфера вывода для предотвращения проблем с headers
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+            header('Content-Type: application/vnd.ms-excel; charset=utf-8');
+            header('Content-Disposition: attachment; filename="seo-database-' . date('Y-m-d-H-i') . '.xls"');
+            header('Pragma: no-cache');
+            header('Expires: 0');
+            echo $excel;
+            exit;
+        } else {
+            $error = 'В базе данных нет результатов для экспорта. Создайте хотя бы один SEO-текст.';
+        }
+    }
+    
+    // Для остальных экспортов требуется last_result
+    if (isset($_SESSION['last_result'])) {
+        $result = $_SESSION['last_result'];
+        $seoMetrics = analyzeSEOMetrics($result);
+        
+        if ($_GET['export'] === 'html') {
+            // Очистка буфера вывода
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+            $html = generateHTMLExport($result, $seoMetrics);
+            header('Content-Type: text/html; charset=utf-8');
+            header('Content-Disposition: attachment; filename="seo-content-' . date('Y-m-d-H-i') . '.html"');
+            echo $html;
+            exit;
+        }
+        
+        if ($_GET['export'] === 'txt') {
+            // Очистка буфера вывода
+            if (ob_get_level()) {
+                ob_end_clean();
+            }
+            $txt = generateTXTExport($result);
+            header('Content-Type: text/plain; charset=utf-8');
+            header('Content-Disposition: attachment; filename="seo-content-' . date('Y-m-d-H-i') . '.txt"');
+            echo $txt;
+            exit;
+        }
     }
 }
 
@@ -910,7 +939,6 @@ function getGenreTemplates() {
 }
 
 // Обработка POST запроса
-session_start();
 $result = null;
 $error = '';
 
@@ -1353,13 +1381,20 @@ $seoMetrics = $result ? analyzeSEOMetrics($result) : null;
             box-shadow: 0 8px 16px rgba(0, 123, 255, 0.3);
         }
 
-        /* НОВЫЙ СТИЛЬ ДЛЯ EXCEL */
+        /* СТИЛЬ ДЛЯ EXCEL */
         .export-btn.excel {
             background: linear-gradient(135deg, #217346 0%, #0F5132 100%);
         }
 
         .export-btn.excel:hover {
             box-shadow: 0 8px 16px rgba(33, 115, 70, 0.3);
+        }
+
+        .export-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
         }
 
         .results-grid {
@@ -1672,15 +1707,22 @@ $seoMetrics = $result ? analyzeSEOMetrics($result) : null;
                                 <i class="fas fa-file-alt"></i>
                                 Скачать TXT
                             </a>
-                            <!-- ОБНОВЛЕННАЯ КНОПКА EXCEL -->
-                            <a href="?export=excel" class="export-btn excel" target="_blank">
-                                <i class="fas fa-file-excel"></i>
-                                <?php if ($historyCount > 1): ?>
-                                    База Excel (<?php echo $historyCount; ?> фильмов)
-                                <?php else: ?>
-                                    Скачать Excel
-                                <?php endif; ?>
-                            </a>
+                            <!-- ИСПРАВЛЕННАЯ КНОПКА EXCEL -->
+                            <?php if ($historyCount > 0): ?>
+                                <a href="?export=excel" class="export-btn excel" target="_blank">
+                                    <i class="fas fa-file-excel"></i>
+                                    <?php if ($historyCount > 1): ?>
+                                        База Excel (<?php echo $historyCount; ?> фильмов)
+                                    <?php else: ?>
+                                        Скачать Excel
+                                    <?php endif; ?>
+                                </a>
+                            <?php else: ?>
+                                <button class="export-btn excel" disabled title="Создайте хотя бы один SEO-текст для экспорта">
+                                    <i class="fas fa-file-excel"></i>
+                                    Скачать Excel (нет данных)
+                                </button>
+                            <?php endif; ?>
                             <button class="export-btn copy" onclick="copyAllContent()">
                                 <i class="fas fa-copy"></i>
                                 Копировать всё
@@ -1931,6 +1973,13 @@ META DESCRIPTION:
         });
         <?php endif; ?>
 
+        // Показ ошибки если нет данных для экспорта Excel
+        <?php if (isset($_GET['export']) && $_GET['export'] === 'excel' && isset($error) && strpos($error, 'нет результатов') !== false): ?>
+        window.addEventListener('load', function() {
+            showNotification('❌ <?php echo addslashes($error); ?>', 'error');
+        });
+        <?php endif; ?>
+
         // Показ уведомления
         function showNotification(message, type = 'success') {
             const notification = document.createElement('div');
@@ -1949,7 +1998,7 @@ META DESCRIPTION:
                 opacity: 0;
                 transform: translateY(-20px);
                 transition: all 0.3s ease;
-                max-width: 300px;
+                max-width: 350px;
             `;
             notification.textContent = message;
             document.body.appendChild(notification);
@@ -1959,13 +2008,16 @@ META DESCRIPTION:
                 notification.style.transform = 'translateY(0)';
             }, 100);
 
+            const duration = type === 'error' ? 6000 : 4000; // Ошибки показываем дольше
             setTimeout(() => {
                 notification.style.opacity = '0';
                 notification.style.transform = 'translateY(-20px)';
                 setTimeout(() => {
-                    document.body.removeChild(notification);
+                    if (document.body.contains(notification)) {
+                        document.body.removeChild(notification);
+                    }
                 }, 300);
-            }, 4000);
+            }, duration);
         }
 
         // Автосохранение в localStorage
